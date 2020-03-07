@@ -24,7 +24,7 @@ class Server(NetworkServer):
     async def run_main(self) -> None:
         for data in self.source.get_data():
             rocket_data = RocketData(datastream=data)
-            # print(rocket_data)
+            print(rocket_data)
             for socket in self.sockets:
                 socket.write_message(rocket_data.to_json())
             await asyncio.sleep(0.001)
