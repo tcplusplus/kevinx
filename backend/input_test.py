@@ -1,7 +1,9 @@
+import time
+from typing import Iterator
 from inputs import Inputs
 
 class InputTest(Inputs):
-    def get_data() -> Iterator[str]:
+    def get_data(self) -> Iterator[str]:
         while True:
             data = str(time.time()) + ','
             for i in range(0, 11):

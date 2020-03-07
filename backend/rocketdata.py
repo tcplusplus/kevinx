@@ -1,5 +1,8 @@
-class RocketData:
+from exportable import Exportable
+
+class RocketData(Exportable):
     def __init__(self, datastream: str) -> None:
+        super().__init__()
         data = datastream.split(',')
         self.time = float(data[0])
         self.gps_lat = float(data[1])
