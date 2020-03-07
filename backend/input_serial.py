@@ -16,7 +16,7 @@ class InputSerial(Inputs):
     def get_data(self) -> Iterator[str]:
         data = ''
         while True:
-            c = self.stream.read(1)
+            c = self.stream.read(1).decode('utf-8')
             if c != '|':
                 data += c
             else:
