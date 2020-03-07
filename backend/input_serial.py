@@ -1,7 +1,10 @@
 import time
 from typing import Iterator
 from inputs import Inputs
-from serial import Serial
+try:
+    from serial import Serial
+except:
+    pass  # rpi only
 
 class InputSerial(Inputs):
     def __init__(self) -> None:
