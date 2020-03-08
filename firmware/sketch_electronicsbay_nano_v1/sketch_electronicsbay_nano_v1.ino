@@ -62,19 +62,20 @@ int counter_ = 0;
 int cycle = 0;
 String data; //data for datalog file
 bool lock = false;
+long age = 0.0;
 
 float lat = 0.0; //create latitude variable (in degrees) (GY-GPS6MV2)
 float lon = 0.0; //create longtitude variable (in degrees) (GY-GPS6MV2)
 float alt_gps= 0.0; //create altitude variable (in meter) (GY-GPS6MV2)
-float num_sats = 0.0; //create number of satellites variable (GY-GPS6MV2)
+//float num_sats = 0.0; //create number of satellites variable (GY-GPS6MV2)
 float acc_x = 0.0; //create accelerometer x variable (MPU-9250)
 float acc_y = 0.0; //create accelerometer y variable (MPU-9250)
 float acc_z = 0.0; //create accelerometer z variable (MPU-9250)
 float gyro_x = 0.0; //create gyro x variable (MPU-9250)
 float gyro_y = 0.0; //create gyro y variable (MPU-9250)
 float gyro_z = 0.0; //create gyro z variable (MPU-9250)
-float pressure_mpl = 0.0; //create pressure variable (in Pascal) (MPL3115A2)
-float temperature_mpl = 0.0; //create temperature variable (in Celsius) (MPL3115A2)
+//float pressure_mpl = 0.0; //create pressure variable (in Pascal) (MPL3115A2)
+//float temperature_mpl = 0.0; //create temperature variable (in Celsius) (MPL3115A2)
 //float sea_pressure_mpl = 0.0; //create altitude at sea level variable (in meter) (MPL3115A2)
 
 
@@ -82,7 +83,7 @@ float temperature_mpl = 0.0; //create temperature variable (in Celsius) (MPL3115
 void setup()
 { 
   Wire.begin();
-  Serial.begin(9600); //connect terminal serial
+  Serial.begin(9600); //connect terminal serial (shared for LORA serial on Arduino Nano)
   //Serial1.begin(9600); //connect LORA serial, only used on Arduino Nano Every
   gpsSerial.begin(9600); // connect gps sensor
 
@@ -152,7 +153,50 @@ void setup()
 //********** MAIN LOOP **********//
 void loop()
 { 
+  //gathering accelerometer/gyro data
+  if (myIMU.readByte(MPU9250_ADDRESS, INT_STATUS) & 0x01)
+  {
+    myIMU.readAccelData(myIMU.accelCount);  // Read the x/y/z adc values
 
+    // Now we'll calculate the accleration value into actual g's
+    // This depends on scale being set
+    myIMU.ax = (float)myIMU.accelCount[0] * myIMU.aRes; // - myIMU.accelBias[0];
+    myIMU.ay = (float)myIMU.accelCount[1] * myIMU.aRes; // - myIMU.accelBias[1];
+    myIMU.az = (float)myIMU.accelCount[2] * myIMU.aRes; // - myIMU.accelBias[2];
+
+    myIMU.readGyroData(myIMU.gyroCount);  // Read the x/y/z adc values
+
+    // Calculate the gyro value into actual degrees per second
+    // This depends on scale being set
+    myIMU.gx = (float)myIMU.gyroCount[0] * myIMU.gRes;
+    myIMU.gy = (float)myIMU.gyroCount[1] * myIMU.gRes;
+    myIMU.gz = (float)myIMU.gyroCount[2] * myIMU.gRes;
+    
+    myIMU.readMagData(myIMU.magCount);  // Read the x/y/z adc values
+
+    /*
+    // Calculate the magnetometer values in milliGauss
+    // Include factory calibration per data sheet and user environmental
+    // corrections
+    // Get actual magnetometer value, this depends on scale being set
+    myIMU.mx = (float)myIMU.magCount[0] * myIMU.mRes
+               * myIMU.factoryMagCalibration[0] - myIMU.magBias[0];
+    myIMU.my = (float)myIMU.magCount[1] * myIMU.mRes
+               * myIMU.factoryMagCalibration[1] - myIMU.magBias[1];
+    myIMU.mz = (float)myIMU.magCount[2] * myIMU.mRes
+               * myIMU.factoryMagCalibration[2] - myIMU.magBias[2];
+    */
+  }
+  
+  //gathering gps data
+  while (gpsSerial.available()>0) 
+  { 
+    gps.encode(gpsSerial.read());
+  }
+  gps.f_get_position(&lat, &lon, &age);
+  alt_gps = gps.f_altitude();
+
+  //writing all data output to serial (terminal/lora)
   Serial.write('|');
   Serial.print(millis());
   Serial.write(",");
@@ -160,25 +204,25 @@ void loop()
   Serial.write(",");
   Serial.print(lon*100000);
   Serial.write(","); 
-  Serial.print(alt_gps, 6);
+  Serial.print(alt_gps);
   Serial.write(",");
-  Serial.print(num_sats);
+  Serial.print(gps.satellites());
   Serial.write(",");
-  Serial.print(acc_x);
+  Serial.print(myIMU.ax);
   Serial.write(",");
-  Serial.print(acc_y);
+  Serial.print(myIMU.ay);
   Serial.write(",");
-  Serial.print(acc_z);
+  Serial.print(myIMU.az);
   Serial.write(",");
-  Serial.print(gyro_x);
+  Serial.print(myIMU.gx);
   Serial.write(",");
-  Serial.print(gyro_y);
+  Serial.print(myIMU.gy);
   Serial.write(",");
-  Serial.print(gyro_z);
+  Serial.print(myIMU.gz);
   Serial.write(",");
-  Serial.print(pressure_mpl);
+  Serial.print(readPressure());
   Serial.write(",");
-  Serial.println(temperature_mpl);
+  Serial.println(readTemp());
 }
 
 
@@ -293,6 +337,7 @@ float readTemp()
 
   return(temperature);
 }
+
 
 //Sets the mode to Barometer
 //CTRL_REG1, ALT bit
