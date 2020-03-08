@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "reconnecting-websocket": "^4.4.0",
+    "vuelayers": "^0.11.21"
+  }
+}
