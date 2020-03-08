@@ -1,4 +1,7 @@
 {
+  "name": "KevinX",
+  "version": "1.0.0",
+  "license": "UNLICENSED",
   "dependencies": {
     "reconnecting-websocket": "^4.4.0",
     "vuelayers": "^0.11.21"
