@@ -9,9 +9,11 @@
   },
   "dependencies": {
     "core-js": "^3.6.4",
+    "reconnecting-websocket": "^4.4.0",
     "register-service-worker": "^1.6.2",
     "vue": "^2.6.11",
-    "vue-router": "^3.1.5"
+    "vue-router": "^3.1.5",
+    "vuelayers": "^0.11.21"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^2.18.0",
