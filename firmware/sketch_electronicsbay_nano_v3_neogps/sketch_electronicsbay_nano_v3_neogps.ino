@@ -1,11 +1,10 @@
 //********** LIBRARIES **********//
-#include <TinyGPS.h>
-//#include <TinyGPS++.h>
-//#include <NMEAGPS.h>
+#include <NMEAGPS.h>
 #include <SPI.h>
 //#include <SD.h>
 #include <MPU9250.h>
-#include <SoftwareSerial.h>
+#include <AltSoftSerial.h>
+//#include <SoftwareSerial.h>
 #include "quaternionFilters.h"
 
 
@@ -29,7 +28,7 @@
 #define F_DATA     0x0E
 #define F_SETUP    0x0F
 #define TIME_DLY   0x10
-#define SYSMOD     0x11
+#define SYSMOD     0x11o
 #define INT_SOURCE 0x12
 #define PT_DATA_CFG 0x13
 #define BAR_IN_MSB 0x14
@@ -56,15 +55,13 @@
 
 //********** VARIABLES **********//
 //File dataLog;
-SoftwareSerial gpsSerial(2,3); //gps tx, rx
-TinyGPS gps; //create gps object
-//NMEAGPS gps; //create gps object
-MPU9250 myIMU(MPU9250_ADDRESS, I2Cport, I2Cclock);
+//SoftwareSerial gpsSerial(2, 3); //gps rx,tx
+AltSoftSerial gpsSerial (8 ,9); //gps rx,tx
+NMEAGPS gps;
+gps_fix fix;
+const unsigned char ubxRate16Hz[] PROGMEM = { 0x06,0x08,0x06,0x00,50,0x00,0x01,0x00,0x01,0x00 };
 
-//const unsigned char ubxRate1Hz[] PROGMEM = { 0x06,0x08,0x06,0x00,0xE8,0x03,0x01,0x00,0x01,0x00 };
-//const unsigned char ubxRate5Hz[] PROGMEM = { 0x06,0x08,0x06,0x00,200,0x00,0x01,0x00,0x01,0x00 };
-//const unsigned char ubxRate10Hz[] PROGMEM = { 0x06,0x08,0x06,0x00,100,0x00,0x01,0x00,0x01,0x00 };
-//const char baud38400 [] PROGMEM = "PUBX,41,1,3,3,38400,0";
+MPU9250 myIMU(MPU9250_ADDRESS, I2Cport, I2Cclock);
 
 int counter_ = 0;
 int cycle = 0;
@@ -72,10 +69,10 @@ String data; //data for datalog file
 bool lock = false;
 long age = 0.0;
 
-float lat = 0.0; //create latitude variable (in degrees) (GY-GPS6MV2)
-float lon = 0.0; //create longtitude variable (in degrees) (GY-GPS6MV2)
-float alt_gps= 0.0; //create altitude variable (in meter) (GY-GPS6MV2)
-//float num_sats = 0.0; //create number of satellites variable (GY-GPS6MV2)
+float lat = 0.0; //create latitude variable (in degrees) (GY-GPSV3-NEO7)
+float lon = 0.0; //create longtitude variable (in degrees) (GY-GPSV3-NEO7)
+float alt_gps= 0.0; //create altitude variable (in meter) (GY-GPSV3-NEO7)
+float num_sats = 0.0; //create number of satellites variable (GY-GPSV3-NEO7)
 float acc_x = 0.0; //create accelerometer x variable (MPU-9250)
 float acc_y = 0.0; //create accelerometer y variable (MPU-9250)
 float acc_z = 0.0; //create accelerometer z variable (MPU-9250)
@@ -85,26 +82,17 @@ float gyro_z = 0.0; //create gyro z variable (MPU-9250)
 //float pressure_mpl = 0.0; //create pressure variable (in Pascal) (MPL3115A2)
 //float temperature_mpl = 0.0; //create temperature variable (in Celsius) (MPL3115A2)
 //float sea_pressure_mpl = 0.0; //create altitude at sea level variable (in meter) (MPL3115A2)
-
+  
 
 //********** SETUP FUNCTION**********//
 void setup()
 { 
   Wire.begin();
   Serial.begin(115200); //connect terminal serial (shared for LORA serial on Arduino Nano)
-  //Serial1.begin(9600); //connect LORA serial, only used on Arduino Nano Every
-  gpsSerial.begin(9600); // connect gps sensor
+  gpsSerial.begin(9600); // connect gps sensor  
 
-  /*
-  gps.send_P( &gpsSerial, (const __FlashStringHelper *) baud38400 );
-  gpsSerial.flush();                              // wait for the command to go out
-  delay(100);                                  // wait for the GPS device to change speeds
-  gpsSerial.end();                                // empty the input buffer, too
-  gpsSerial.begin(38400);                      // use the new baud 
-
-  sendUBX( ubxRate5Hz, sizeof(ubxRate5Hz) );   // change both "ubxRate5Hz" to "ubxRate1Hz" or ubxRate10Hz" for different rates
-  */
-  
+  // Configure GPS receiver to update at 16Hz
+  sendUBX(ubxRate16Hz, sizeof(ubxRate16Hz));
 
   // Calibrate gyro and accelerometers, load biases in bias registers
   Serial.println(F("Please hold your gyro/accelerometer stable & level in 5 seconds"));
@@ -141,7 +129,7 @@ void setup()
   
   // Configure the MPL sensor
   setModeBarometer(); // Measure pressure in Pascals from 20 to 110 kPa
-  setOversampleRate(1); // Set Oversample to the recommended 128
+  setOversampleRate(0); // Set Oversample to the recommended 128
   enableEventFlags(); // Enable all three pressure and temp event flags
   
   /*
@@ -205,23 +193,31 @@ void loop()
     // along the x-axis just like in the LSM9DS0 sensor. This rotation can be
     // modified to allow any convenient orientation convention. This is ok by
     // aircraft orientation standards! Pass gyro rate as rad/s
-    //MahonyQuaternionUpdate(myIMU.ax, myIMU.ay, myIMU.az, myIMU.gx * DEG_TO_RAD,
+    // MahonyQuaternionUpdate(myIMU.ax, myIMU.ay, myIMU.az, myIMU.gx * DEG_TO_RAD,
     //                       myIMU.gy * DEG_TO_RAD, myIMU.gz * DEG_TO_RAD, myIMU.my,
     //                       myIMU.mx, myIMU.mz, myIMU.deltat);
   }
-
-  
+   
   //gathering gps data
-  while (gpsSerial.available()>0) 
-  { 
-    gps.encode(gpsSerial.read());
-  }
-  gps.f_get_position(&lat, &lon, &age);
-  alt_gps = gps.f_altitude();
-  
-  //writing all data output to serial (terminal/lora)
+  while (gps.available(gpsSerial)) 
+  {
+    
+    fix = gps.read();
 
-  
+    if(fix.valid.location)
+    {
+      lat = fix.latitude();
+      lon = fix.longitude();
+    }
+
+    if(fix.valid.altitude)
+      alt_gps = fix.altitude();
+
+    if(fix.valid.satellites)
+      num_sats = fix.satellites;
+  }
+    
+  //writing all data output to serial (terminal/lora)
   Serial.print(F("|"));
   Serial.print(millis());
   Serial.print(F(","));
@@ -231,8 +227,8 @@ void loop()
   Serial.print(F(","));
   Serial.print(alt_gps);
   Serial.print(F(","));
-  Serial.println(gps.satellites());
-  /*
+  Serial.print(num_sats);
+  
   Serial.print(F(","));
   Serial.print(myIMU.ax);
   Serial.print(F(","));
@@ -253,12 +249,11 @@ void loop()
   Serial.print(myIMU.mz);
   Serial.print(F(","));
   Serial.print(myIMU.deltat);
+  
   Serial.print(F(","));
   Serial.print(readPressure());
   Serial.print(F(","));
   Serial.println(readTemp());
-  */
-  
 }
 
 
@@ -445,7 +440,7 @@ void IIC_Write(byte regAddr, byte value)
   Wire.endTransmission(true);
 }
 
-/*
+
 void sendUBX( const unsigned char *progmemBytes, size_t len )
 {
   gpsSerial.write( 0xB5 ); // SYNC1
@@ -463,4 +458,3 @@ void sendUBX( const unsigned char *progmemBytes, size_t len )
   gpsSerial.write( b ); // CHECKSUM B
 
 }
-*/

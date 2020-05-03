@@ -1,11 +1,11 @@
 //********** LIBRARIES **********//
-#include <TinyGPS.h>
-//#include <TinyGPS++.h>
+//#include <TinyGPS.h>
+#include <TinyGPS++.h>
 //#include <NMEAGPS.h>
 #include <SPI.h>
 //#include <SD.h>
 #include <MPU9250.h>
-#include <SoftwareSerial.h>
+#include <AltSoftSerial.h>
 #include "quaternionFilters.h"
 
 
@@ -56,9 +56,8 @@
 
 //********** VARIABLES **********//
 //File dataLog;
-SoftwareSerial gpsSerial(2,3); //gps tx, rx
-TinyGPS gps; //create gps object
-//NMEAGPS gps; //create gps object
+AltSoftSerial gpsSerial(8,9); //gps rx,tx
+TinyGPSPlus gps; //create gps object
 MPU9250 myIMU(MPU9250_ADDRESS, I2Cport, I2Cclock);
 
 //const unsigned char ubxRate1Hz[] PROGMEM = { 0x06,0x08,0x06,0x00,0xE8,0x03,0x01,0x00,0x01,0x00 };
@@ -92,19 +91,7 @@ void setup()
 { 
   Wire.begin();
   Serial.begin(115200); //connect terminal serial (shared for LORA serial on Arduino Nano)
-  //Serial1.begin(9600); //connect LORA serial, only used on Arduino Nano Every
-  gpsSerial.begin(9600); // connect gps sensor
-
-  /*
-  gps.send_P( &gpsSerial, (const __FlashStringHelper *) baud38400 );
-  gpsSerial.flush();                              // wait for the command to go out
-  delay(100);                                  // wait for the GPS device to change speeds
-  gpsSerial.end();                                // empty the input buffer, too
-  gpsSerial.begin(38400);                      // use the new baud 
-
-  sendUBX( ubxRate5Hz, sizeof(ubxRate5Hz) );   // change both "ubxRate5Hz" to "ubxRate1Hz" or ubxRate10Hz" for different rates
-  */
-  
+  gpsSerial.begin(38400); // connect gps sensor  
 
   // Calibrate gyro and accelerometers, load biases in bias registers
   Serial.println(F("Please hold your gyro/accelerometer stable & level in 5 seconds"));
@@ -212,27 +199,34 @@ void loop()
 
   
   //gathering gps data
+  /*
   while (gpsSerial.available()>0) 
   { 
     gps.encode(gpsSerial.read());
   }
   gps.f_get_position(&lat, &lon, &age);
   alt_gps = gps.f_altitude();
+  */
+
+  while (gpsSerial.available()>0) 
+  { 
+    //Serial.println("data");
+    gps.encode(gpsSerial.read());
+  }
   
   //writing all data output to serial (terminal/lora)
 
-  
   Serial.print(F("|"));
   Serial.print(millis());
   Serial.print(F(","));
-  Serial.print(lat, 6);
+  Serial.print(gps.location.lat(), 6);
   Serial.print(F(","));
-  Serial.print(lon, 6);
+  Serial.print(gps.location.lng(), 6);
   Serial.print(F(","));
-  Serial.print(alt_gps);
+  Serial.print(gps.altitude.meters());
   Serial.print(F(","));
-  Serial.println(gps.satellites());
-  /*
+  Serial.print(gps.satellites.value());
+  
   Serial.print(F(","));
   Serial.print(myIMU.ax);
   Serial.print(F(","));
@@ -252,13 +246,11 @@ void loop()
   Serial.print(F(","));
   Serial.print(myIMU.mz);
   Serial.print(F(","));
-  Serial.print(myIMU.deltat);
-  Serial.print(F(","));
-  Serial.print(readPressure());
-  Serial.print(F(","));
-  Serial.println(readTemp());
-  */
-  
+  Serial.println(myIMU.deltat);
+  //Serial.print(F(","));
+  //Serial.print(readPressure());
+  //Serial.print(F(","));
+  //Serial.println(readTemp());
 }
 
 
