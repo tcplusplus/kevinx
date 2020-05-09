@@ -35,12 +35,6 @@
         <vl-source-osm />
       </vl-layer-tile>
     </vl-map>
-    <div style="padding: 20px">
-      Zoom: {{ zoom }}<br>
-      Center: {{ center }}<br>
-      Rotation: {{ rotation }}<br>
-      My geolocation: {{ geolocPosition }}
-    </div>
   </div>
 </template>
 

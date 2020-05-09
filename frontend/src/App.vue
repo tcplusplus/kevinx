@@ -2,6 +2,31 @@
   <div id="app">
     <img alt="Vue logo" src="./assets/kevinx.png">
     {{ data }}
+    <table>
+      <tr>
+        <th>Sensor</th>
+        <th>X</th>
+        <th>Y</th>
+        <th>Z</th>
+      </tr>
+      <tr>
+        <td>acc</td>
+        <td>{{ data.acc_x }}</td>
+        <td>{{ data.acc_y }}</td>
+        <td>{{ data.acc_z }}</td>
+      </tr>
+      <tr>
+        <td>giro</td>
+        <td>{{ data.giro_x }}</td>
+        <td>{{ data.giro_y }}</td>
+        <td>{{ data.giro_z }}</td>
+      </tr>
+    </table>
+
+    GPS: lat={{ data.gps_lat }} lon={{ data.gps_lon }} ( {{ data.gps_num_sat }} sat)<br>
+    Altitude: {{ data.gps_alt }} (from gps), {{ data.pressure_alt }} (from pressure)<br>
+    Temp:  {{ data.pressure_temp }}<br>
+    Time: {{ data.time }}
     <Maps :location="location" />
   </div>
 </template>
@@ -36,8 +61,8 @@ export default Vue.extend({
     let ip = '' + window.location.href
     console.log(this.$route.query, window.location.href)
     ip = ip.replace('http://', '').replace('/', '')
-    ip = '141.135.128.158'
-    this.socket = new ReconnectingWebSocket('ws://' + ip + ':8080/socket')
+    // ip = '141.135.128.158'
+    this.socket = new ReconnectingWebSocket('ws://' + ip + '/socket')
     this.socket.onmessage = this.newmessage
   },
   methods: {
