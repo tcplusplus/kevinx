@@ -14,11 +14,16 @@ class InputSerial(Inputs):
         data = ''
         first_received = False
         while True:
-            c = self.stream.read(1).decode('utf-8')
-            if c != '|' and first_received:
-                data += c
-            elif first_received:
-                yield data
-                data = ''
-            else:
-                first_received = True
+            try:
+                c = self.stream.read(1).decode('utf-8')
+                if c != '|' and first_received:
+                    data += c
+                elif first_received:
+                    yield data
+                    data = ''
+                else:
+                    first_received = True
+            except:
+                self.stream.close()
+                self.stream = Serial(port='/dev/ttyS0')
+
