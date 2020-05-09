@@ -1,0 +1,15 @@
+[Unit]
+Description=ProjectK RPi
+After=network.target
+
+[Service]
+Environment=DISPLAY=:0:w
+ExecStart=/bin/bash -ce "exec env/bin/python server.py >> /projectk/log/kevinx.log 2>&1"
+WorkingDirectory=/home/pi/tom/kevinx/backend
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+User=pi
+
+[Install]
+WantedBy=multi-user.target

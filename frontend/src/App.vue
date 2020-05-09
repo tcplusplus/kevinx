@@ -1,23 +1,23 @@
 <template>
   <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png" />
+    <img alt="Vue logo" src="./assets/kevinx.png">
     {{ data }}
     <Maps :location="location" />
-
   </div>
 </template>
 
 <script lang="ts">
-import Vue from "vue";
-import ReconnectingWebSocket from 'reconnecting-websocket';
-import VueLayers from 'vuelayers';
+import Vue from 'vue'
+import ReconnectingWebSocket from 'reconnecting-websocket'
+// @ts-ignore
+import VueLayers from 'vuelayers'
 import 'vuelayers/lib/style.css' // needs css-loader
 import Maps from '@/components/Maps.vue'
 
 Vue.use(VueLayers)
 
 export default Vue.extend({
-  name: "App",
+  name: 'App',
   components: {
     Maps
   },
@@ -26,20 +26,26 @@ export default Vue.extend({
     data: {},
     rocketposition: undefined
   }),
-  created () {
-    this.socket.onmessage = this.newmessage
-  },
   computed: {
-    location () {
+    location() {
       return [0, 0]
     }
   },
+  created() {
+    this.socket.close()
+    let ip = '' + window.location.href
+    console.log(this.$route.query, window.location.href)
+    ip = ip.replace('http://', '').replace('/', '')
+    ip = '141.135.128.158'
+    this.socket = new ReconnectingWebSocket('ws://' + ip + ':8080/socket')
+    this.socket.onmessage = this.newmessage
+  },
   methods: {
-    newmessage (message: MessageEvent) {
+    newmessage(message: MessageEvent) {
       this.data = JSON.parse(message.data)
-    } 
+    }
   }
-});
+})
 </script>
 
 <style>
