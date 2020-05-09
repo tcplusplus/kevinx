@@ -37,7 +37,7 @@ class Server(NetworkServer):
         for data in self.source.get_data():
             try:
                 rocket_data.update(datastream=data)
-                # print(rocket_data)
+                print('data: ' + str(rocket_data))
                 for socket in self.sockets:
                     socket.write_message(rocket_data.to_json())
             except Exception as error:
