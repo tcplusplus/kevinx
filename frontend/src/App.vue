@@ -2,6 +2,19 @@
   <div id="app">
     <img alt="Vue logo" src="./assets/kevinx.png">
     {{ data }}
+
+    <div>
+      Recorders:
+      <ul>
+        <li v-for="(value, recorder) in data.recorders" :key="recorder">
+          <label class="switch">
+            <input type="checkbox" :checked="value" @change="changeRecorder(recorder)">
+            <span class="slider round" /> {{ recorder }}
+          </label>
+        </li>
+      </ul>
+    </div>
+
     <table>
       <tr>
         <th>Sensor</th>
@@ -62,12 +75,16 @@ export default Vue.extend({
     console.log(this.$route.query, window.location.href)
     ip = ip.replace('http://', '').replace('/', '')
     // ip = '141.135.128.158'
+    // ip = 'localhost:8080' // FIXME remove
     this.socket = new ReconnectingWebSocket('ws://' + ip + '/socket')
     this.socket.onmessage = this.newmessage
   },
   methods: {
     newmessage(message: MessageEvent) {
       this.data = JSON.parse(message.data)
+    },
+    changeRecorder(recorder: string) {
+      this.socket.send(JSON.stringify({ action: 'recorder', recorder, value: !this.data.recorders[recorder] }))
     }
   }
 })

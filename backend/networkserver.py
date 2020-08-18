@@ -10,3 +10,6 @@ class NetworkServer:
     
     def remove_socket(self, socket: websocket.WebSocketHandler) -> None:
         self.sockets.remove(socket)
+    
+    def on_message(self, data: str) -> None:
+        pass

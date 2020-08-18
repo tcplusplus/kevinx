@@ -29,3 +29,10 @@ class RocketSocket(websocket.WebSocketHandler):
         """
         logging.info("The connection is now closed")
         self.server.remove_socket(self)
+
+    def on_message(self, data: str) -> None:
+        """
+        Receive a message from client
+        """
+        logging.info(f"Received message {data}")
+        self.server.on_message(data)

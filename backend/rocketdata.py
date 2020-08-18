@@ -1,3 +1,4 @@
+from typing import Dict
 from exportable import Exportable
 
 class RocketData(Exportable):
@@ -16,6 +17,7 @@ class RocketData(Exportable):
         self.giro_z = 0
         self.pressure_alt = 0
         self.pressure_temp = 0
+        self.recorders: Dict[str, bool] = {}
 
     def update(self, datastream: str) -> bool:
         data = datastream.split(',')
