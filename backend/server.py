@@ -26,12 +26,8 @@ class Server(NetworkServer):
         self.test_mode = test_mode
         handlers = [(r'/socket', RocketSocket, dict(server=self))] 
         self.webserver = WebServer(port=8080, handlers=handlers)
-        self.source: Optional[Inputs] = None
-        if test_mode:
-            self.source = InputTest()
-        else:
-            self.source = InputSerial()
-    
+        self.source: Inputs = InputTest if test_mode else InputSerial()
+
     async def run_main(self) -> None:
         rocket_data = RocketData()
         for data in self.source.get_data():
@@ -39,7 +35,10 @@ class Server(NetworkServer):
                 rocket_data.update(datastream=data)
                 print('data: ' + str(rocket_data))
                 for socket in self.sockets:
-                    socket.write_message(rocket_data.to_json())
+                    try:
+                        socket.write_message(rocket_data.to_json())
+                    except Exception as error:
+                        self.remove_socket(socket)
             except Exception as error:
                 print('Could not parse ' + str(error))
             await asyncio.sleep(0.001)
