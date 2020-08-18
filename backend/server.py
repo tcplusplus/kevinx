@@ -26,7 +26,7 @@ class Server(NetworkServer):
         self.test_mode = test_mode
         handlers = [(r'/socket', RocketSocket, dict(server=self))] 
         self.webserver = WebServer(port=8080, handlers=handlers)
-        self.source: Inputs = InputTest if test_mode else InputSerial()
+        self.source: Inputs = InputTest() if test_mode else InputSerial()
 
     async def run_main(self) -> None:
         rocket_data = RocketData()
