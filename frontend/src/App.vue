@@ -1,38 +1,59 @@
 <template>
   <div id="app">
     <img alt="Vue logo" src="./assets/kevinx.png" class="logo">
-    <!-- <div>
-      Recorders:
-      <ul>
-        <li v-for="(value, recorder) in data.recorders" :key="recorder">
-          <label class="switch">
-            <input type="checkbox" :checked="value" @change="changeRecorder(recorder)">
-            <span class="slider round" /> {{ recorder }}
-          </label>
-        </li>
-      </ul>
-    </div>
-
-    <table>
-      <tr>
-        <th>Sensor</th>
-        <th>X</th>
-        <th>Y</th>
-        <th>Z</th>
-      </tr>
-      <tr>
-        <td>acc</td>
-        <td>{{ data.acc_x }}</td>
-        <td>{{ data.acc_y }}</td>
-        <td>{{ data.acc_z }}</td>
-      </tr>
-      <tr>
-        <td>giro</td>
-        <td>{{ data.giro_x }}</td>
-        <td>{{ data.giro_y }}</td>
-        <td>{{ data.giro_z }}</td>
-      </tr>
-    </table> -->
+    <b-card title="Status" class="card">
+      <b-card-text>
+        <table width="100%">
+          <tr>
+            <td width="15%">
+              <v-icon name="wifi" />
+            </td>
+            <td width="70%" class="datatable">
+              Connection
+            </td>
+            <td width="15%">
+              <v-icon name="star" :style="{color: connected ? 'green' : 'red'}" />
+            </td>
+          </tr>
+          <tr>
+            <td width="15%">
+              <v-icon name="inbox" />
+            </td>
+            <td width="70%" class="datatable">
+              Data
+            </td>
+            <td width="15%">
+              <v-icon name="star" :style="{color: receiving ? 'green' : 'red'}" />
+            </td>
+          </tr>
+          <tr>
+            <td width="15%">
+              <v-icon name="video" />
+            </td>
+            <td width="70%" class="datatable">
+              Record
+            </td>
+            <td width="15%">
+              <b-form-checkbox
+                v-model="data.recorders.CSV"
+                name="check-button"
+                switch
+                @change="changeRecorder('CSV', !data.recorders.CSV)"
+              />
+            </td>
+          </tr>
+          <tr>
+            <td width="15%">
+              <v-icon name="download" />
+            </td>
+            <td width="70%" class="datatable">
+              <a href="/recordings" target="blank">Downloads</a>
+            </td>
+            <td width="15%" />
+          </tr>
+        </table>
+      </b-card-text>
+    </b-card>
     <br>
     <b-card title="Sensors" class="card">
       <b-card-text>
@@ -79,6 +100,38 @@
             </td>
           </tr>
         </table>
+        <table width="100%">
+          <tr>
+            <th class="icontable" width="15%">
+              <v-icon name="tachometer-alt" />
+            </th>
+            <th width="20%">
+              X
+            </th>
+            <th width="20%">
+              Y
+            </th>
+            <th width="20%">
+              Z
+            </th>
+          </tr>
+          <tr>
+            <td class="icontable">
+              acc
+            </td>
+            <td>{{ data.acc_x }}</td>
+            <td>{{ data.acc_y }}</td>
+            <td>{{ data.acc_z }}</td>
+          </tr>
+          <tr>
+            <td class="icontable">
+              giro
+            </td>
+            <td>{{ data.giro_x }}</td>
+            <td>{{ data.giro_y }}</td>
+            <td>{{ data.giro_z }}</td>
+          </tr>
+        </table>
       </b-card-text>
     </b-card>
   </div>
@@ -92,26 +145,15 @@ import VueLayers from 'vuelayers'
 import 'vuelayers/lib/style.css' // needs css-loader
 import Maps from '@/components/Maps.vue'
 import { BootstrapVue, IconsPlugin } from 'bootstrap-vue'
-
-// Install BootstrapVue
-Vue.use(BootstrapVue)
-// Optionally install the BootstrapVue icon components plugin
-Vue.use(IconsPlugin)
-
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-vue/dist/bootstrap-vue.css'
-
-// or import all icons if you don't care about bundle size
 import 'vue-awesome/icons'
-
-/* Register component with one of 2 methods */
-
 import Icon from 'vue-awesome/components/Icon.vue'
 
-// globally (in your main .js file)
 Vue.component('v-icon', Icon)
-
 Vue.use(VueLayers)
+Vue.use(BootstrapVue)
+Vue.use(IconsPlugin)
 
 export default Vue.extend({
   name: 'App',
@@ -122,13 +164,29 @@ export default Vue.extend({
     socket: new ReconnectingWebSocket('ws://localhost:5678/socket'),
     data: {
       gps_lat: 0,
-      gps_lon: 0
+      gps_lon: 0,
+      gps_num_sat: 0,
+      pressure_temp: 0,
+      acc_x: 0,
+      acc_y: 0,
+      acc_z: 0,
+      giro_x: 0,
+      giro_y: 0,
+      giro_z: 0,
+      recorders: {
+        CSV: false
+      }
     },
-    rocketposition: undefined
+    connected: false,
+    lastReceived: 0,
+    now: (new Date()).getTime()
   }),
   computed: {
-    location() {
+    location(): number[] {
       return [this.data.gps_lat, this.data.gps_lon]
+    },
+    receiving(): boolean {
+      return this.now - 20000 < this.lastReceived
     }
   },
   created() {
@@ -137,17 +195,21 @@ export default Vue.extend({
     console.log(this.$route.query, window.location.href)
     ip = ip.replace('http://', '').replace('/', '')
     // ip = '141.135.128.158'
-    ip = 'localhost:8080' // FIXME remove
+    // ip = 'localhost:8080' // FIXME remove
     this.socket = new ReconnectingWebSocket('ws://' + ip + '/socket')
     this.socket.onmessage = this.newmessage
+    this.socket.onopen = () => this.connected = true
+    this.socket.onclose = () => this.connected = false
+    setInterval(() => this.now = (new Date()).getTime(), 1000)
   },
   methods: {
     newmessage (message: MessageEvent) {
       this.data = JSON.parse(message.data)
+      this.lastReceived = (new Date()).getTime()
     },
-    changeRecorder (recorder: string) {
+    changeRecorder (recorder: string, value: boolean) {
       // @ts-ignore
-      this.socket.send(JSON.stringify({ action: 'recorder', recorder, value: !this.data.recorders[recorder] }))
+      this.socket.send(JSON.stringify({ action: 'recorder', recorder, value }))
     },
     toGPS (coord: number): string {
       const deg = Math.floor(coord)
@@ -207,6 +269,7 @@ export default Vue.extend({
 
 .datatable {
   text-align: left;
+  padding-left: 10px;
 }
 
 </style>

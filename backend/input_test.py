@@ -7,6 +7,7 @@ class InputTest(Inputs):
         while True:
             for i in range(0, 11):
                 data = str(i) + ',20.000' + str(i)
+                time.sleep(0.1)
                 yield data
 
 
