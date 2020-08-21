@@ -48,6 +48,6 @@ class RocketData(Exportable):
         if index == 11:
             self.pressure_alt = value
         if index == 12:
-            self.pressure_temp = 13
+            self.pressure_temp = value
         
 

@@ -66,7 +66,7 @@ module.exports = {
     'complexity': ['error', { 'max': 12 }],
     'max-depth': ['error', 3],
     'max-len': ['error', { 'code': 140 }],
-    'max-lines': ['error', 200],            // goal is 200
+    'max-lines': ['error', 300],            // goal is 200
     'max-lines-per-function': ['error', 35],
     'vue/component-name-in-template-casing': ['error', 'PascalCase'],
     'semi': ['error', 'never'],
